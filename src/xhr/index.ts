@@ -38,3 +38,11 @@ export const generateReport = (job: string) => fetch(`${url}/report/${job}`, {
     'Content-Type': `application/json`,
   },
 }).then((r) => ({ success: r.status !== 500 }))
+
+export const uploadImage = (imageData: { base64: string; filename: string; unitId?: string; job?: string }) => fetch(`${url}/upload`, {
+  method: `POST`,
+  body: JSON.stringify(imageData),
+  headers: {
+    'Content-Type': `application/json`,
+  },
+}).then((r) => ({ success: r.status !== 500, data: r.json() }))

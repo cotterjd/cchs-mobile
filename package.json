@@ -1,6 +1,6 @@
 {
   "name": "Vine",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "scripts": {
     "build": "vue-cli-service build --mode production",
@@ -76,7 +76,11 @@
       "space-before-function-paren": 0,
       "@typescript-eslint/no-unused-vars": [ 1, { "args": "none" }],
       "@typescript-eslint/no-var-requires": 0,
-      "arrow-parens": 0
+      "arrow-parens": 0,
+      "vuejs-accessibility/form-control-has-label": 1,
+      "arrow-body-style": 0,
+      "no-trailing-spaces": 1,
+      "vue/no-unused-components": 1
     },
     "overrides": [
       {

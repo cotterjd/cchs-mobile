@@ -68,6 +68,16 @@
     />
     <spacer-break />
   </div>
+
+  <spacer-break />
+  <h3>Add Photos</h3>
+  <image-upload
+    :unitId="unitName"
+    :job="storageJob"
+    @upload-success="onImageUploaded"
+  />
+  <spacer-break />
+
   <Button
     @click="onEndJob"
     label="End Job"
@@ -151,6 +161,7 @@ import { UnitCode, Bug } from '@/types'
 // import * as R from 'ramda'
 import SpacerBreak from '@/components/SpacerBreak.vue'
 import SavedCodesList from '@/components/SavedCodesList.vue'
+import ImageUpload from '@/components/ImageUpload.vue'
 import { unserviced, servicedWithIssues, servicedNoIssues } from '@/static/codes'
 import 'primeicons/primeicons.css'
 
@@ -193,6 +204,7 @@ export default defineComponent({
     Checkbox,
     TextArea,
     SavedCodesList,
+    ImageUpload,
   },
   data: (): Data => ({
     bugDesc: ``,
@@ -439,6 +451,13 @@ export default defineComponent({
       this.syncing = ``
       this.saving = ``
       this.loading = false
+    },
+    onImageUploaded(data: any) {
+      alert(`Image upload not supported yet.`)
+      // You can add additional logic here, such as:
+      // - Refresh the list of images
+      // - Show a success notification
+      // - Store the image reference with the unit code
     },
   },
 })
