@@ -2,15 +2,8 @@
   <div class="image-upload">
     <div class="upload-buttons">
       <Button
-        @click="triggerFileInput"
-        label="Choose from Gallery"
-        icon="pi pi-images"
-        class="p-button-lg"
-      />
-      <spacer-break />
-      <Button
         @click="triggerCamera"
-        label="Take Photo"
+        label="Add Photo"
         icon="pi pi-camera"
         class="p-button-lg"
       />

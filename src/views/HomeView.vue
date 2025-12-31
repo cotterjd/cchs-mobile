@@ -70,7 +70,6 @@
   </div>
 
   <spacer-break />
-  <h3>Add Photos</h3>
   <image-upload
     :unitId="unitName"
     :job="storageJob"
