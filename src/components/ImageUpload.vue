@@ -37,13 +37,6 @@
           icon="pi pi-times"
           class="p-button-secondary"
         />
-        <Button
-          @click="uploadImage"
-          label="Upload"
-          icon="pi pi-upload"
-          class="p-button-success"
-          :loading="uploading"
-        />
       </div>
     </div>
 
@@ -56,11 +49,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { defineComponent } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import SpacerBreak from '@/components/SpacerBreak.vue'
-import { uploadImage as uploadImageXhr } from '@/xhr'
+import { uploadImage } from '@/xhr'
 
 export default defineComponent({
   name: 'ImageUpload',
@@ -79,24 +72,27 @@ export default defineComponent({
       default: '',
     },
   },
-  setup(props, { emit }) {
-    const fileInput = ref<HTMLInputElement | null>(null)
-    const cameraInput = ref<HTMLInputElement | null>(null)
-    const preview = ref<string>('')
-    const base64Data = ref<string>('')
-    const filename = ref<string>('')
-    const uploading = ref(false)
-    const uploadStatus = ref<{ type: string; message: string } | null>(null)
-
-    const triggerFileInput = () => {
-      fileInput.value?.click()
+  data() {
+    return {
+      preview: '' as string,
+      base64Data: '' as string,
+      filename: '' as string,
+      uploading: false,
+      uploadStatus: null as { type: string; message: string } | null,
     }
+  },
+  methods: {
+    triggerFileInput() {
+      const fileInput = this.$refs.fileInput as HTMLInputElement
+      fileInput?.click()
+    },
 
-    const triggerCamera = () => {
-      cameraInput.value?.click()
-    }
+    triggerCamera() {
+      const cameraInput = this.$refs.cameraInput as HTMLInputElement
+      cameraInput?.click()
+    },
 
-    const convertToBase64 = (file: File): Promise<string> => {
+    convertToBase64(file: File): Promise<string> {
       return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => {
@@ -111,9 +107,9 @@ export default defineComponent({
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
-    }
+    },
 
-    const onFileSelected = async (event: Event) => {
+    async onFileSelected(event: Event) {
       const target = event.target as HTMLInputElement
       const file = target.files?.[0]
 
@@ -123,85 +119,76 @@ export default defineComponent({
         // Create preview
         const reader = new FileReader()
         reader.onload = (e) => {
-          preview.value = e.target?.result as string
+          this.preview = e.target?.result as string
         }
         reader.readAsDataURL(file)
 
         // Convert to base64 for upload
-        base64Data.value = await convertToBase64(file)
-        filename.value = file.name
-        uploadStatus.value = null
+        this.base64Data = await this.convertToBase64(file)
+        console.log(`base64dat`, this.base64Data)
+        this.filename = file.name
+        this.uploadStatus = null
       } catch (error) {
         console.error('Error processing image:', error)
-        uploadStatus.value = {
+        this.uploadStatus = {
           type: 'error',
           message: 'Failed to process image',
         }
       }
-    }
+    },
 
-    const clearImage = () => {
-      preview.value = ''
-      base64Data.value = ''
-      filename.value = ''
-      uploadStatus.value = null
-      if (fileInput.value) fileInput.value.value = ''
-      if (cameraInput.value) cameraInput.value.value = ''
-    }
+    clearImage() {
+      this.preview = ''
+      this.base64Data = ''
+      this.filename = ''
+      this.uploadStatus = null
+      const fileInput = this.$refs.fileInput as HTMLInputElement
+      const cameraInput = this.$refs.cameraInput as HTMLInputElement
+      if (fileInput) fileInput.value = ''
+      if (cameraInput) cameraInput.value = ''
+    },
 
-    const uploadImage = async () => {
-      if (!base64Data.value) return
+    // TODO: move this logic to the Add Codes button or something
+    async onSaveImage() {
+      if (!this.base64Data) return
 
-      uploading.value = true
-      uploadStatus.value = null
+      this.uploading = true
+      this.uploadStatus = null
 
       try {
-        const result = await uploadImageXhr({
-          base64: base64Data.value,
-          filename: filename.value,
-          unitId: props.unitId,
-          job: props.job,
+        const result = await uploadImage({
+          base64: this.base64Data,
+          filename: this.filename,
+          unitId: this.unitId,
+          job: this.job,
         })
 
         if (result.success) {
-          uploadStatus.value = {
+          this.uploadStatus = {
             type: 'success',
             message: 'Image uploaded successfully!',
           }
-          emit('upload-success', result.data)
+          this.$emit('upload-success', result.data)
           // Clear after successful upload
           setTimeout(() => {
-            clearImage()
+            this.clearImage()
           }, 2000)
         } else {
-          uploadStatus.value = {
+          this.uploadStatus = {
             type: 'error',
             message: 'Upload failed. Please try again.',
           }
         }
       } catch (error) {
         console.error('Error uploading image:', error)
-        uploadStatus.value = {
+        this.uploadStatus = {
           type: 'error',
           message: 'Upload failed. Please try again.',
         }
       } finally {
-        uploading.value = false
+        this.uploading = false
       }
-    }
-
-    return {
-      fileInput,
-      cameraInput,
-      preview,
-      uploading,
-      uploadStatus,
-      triggerFileInput,
-      triggerCamera,
-      onFileSelected,
-      clearImage,
-      uploadImage,
-    }
+    },
   },
 })
 </script>
