@@ -15,13 +15,26 @@ export const listUnitCodes = (job: string) => {
 export const getUnit = (unit: string, job: string) => fetch(`${url}/unitcode?unit=${encodeURIComponent(unit)}&job=${encodeURIComponent(job)}`)
   .then((r) => r.json())
 
-export const saveUnitCodes = (unitCode: UnitCode) => fetch(`${url}/unitcode`, {
-  method: `POST`,
-  body: JSON.stringify(unitCode),
-  headers: {
-    'Content-Type': `application/json`,
-  },
-}).then((r) => ({ success: r.status !== 500, unitCode }))
+export const saveUnitCodes = (unitCode: UnitCode, image?: File | null) => {
+  const formData = new FormData()
+  formData.append('user', unitCode.user)
+  formData.append('unit', unitCode.unit)
+  formData.append('codes', unitCode.codes)
+  formData.append('property', unitCode.property)
+
+  console.log(`image`, image)
+  if (image) {
+    formData.append('imageFile', image)
+  }
+
+  return fetch(`${url}/unitcode`, {
+    method: `POST`,
+    body: formData,
+    // headers: {
+    //   "Content-Type": "multipart/form-data",
+    // },
+  }).then((r) => ({ success: r.status !== 500, unitCode }))
+}
 
 export const submitBug = (bug: Bug) => fetch(`${url}/support_email`, {
   method: `POST`,

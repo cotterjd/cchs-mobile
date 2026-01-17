@@ -71,9 +71,10 @@
 
   <spacer-break />
   <image-upload
+    ref="imageUpload"
     :unitId="unitName"
     :job="storageJob"
-    @upload-success="onImageUploaded"
+    @image-selected="onImageSelected"
   />
   <spacer-break />
 
@@ -190,6 +191,7 @@ export interface Data {
   loading: boolean
   saving: string
   offlineMode: boolean
+  image: File | null
 }
 export default defineComponent({
   name: `HomeView`,
@@ -225,6 +227,7 @@ export default defineComponent({
     loading: false,
     saving: ``,
     offlineMode: false,
+    image: null,
   }),
   computed: {
     ...mapState({
@@ -375,14 +378,22 @@ export default defineComponent({
       }
       this.addCodeToUI(codeToSave)
       if (!this.offlineMode) {
+        this.loading = true
         this.saving = this.unitName
-        saveUnitCodes(codeToSave)
+        saveUnitCodes(codeToSave, this.image)
           .then(this.getSavedCodes)
-          .then(this.resetValues)
-          .catch(this.resetValues) // let it fail silently, the codes can be synced later
+          .then(() => {
+            this.resetValues()
+            alert('Saved successfully')
+          })
+          .catch(() => {
+            this.resetValues()
+            alert('Saved successfully')
+          }) // let it fail silently, the codes can be synced later
       } else {
         // It's in offline mode, it's already added to UI, so just reset values
         this.resetValues()
+        alert('Saved successfully')
       }
     },
     addCodeToUI(unitCode: UnitCode) {
@@ -433,7 +444,6 @@ export default defineComponent({
     syncUnsavedUnits() {
       this.loading = true
       const unsavedCodes = this.getStorageCodes()
-      const job: string = this.storageJob
       Promise.all(unsavedCodes.map(saveUnitCodes))
         .then(() => {
           localStorage.setItem(`job`, ``)
@@ -450,13 +460,16 @@ export default defineComponent({
       this.syncing = ``
       this.saving = ``
       this.loading = false
+      this.image = null
+      // Clear the image preview in the ImageUpload component
+      const imageUpload = this.$refs.imageUpload as any
+      if (imageUpload && imageUpload.clearImage) {
+        imageUpload.clearImage()
+      }
     },
-    onImageUploaded(data: any) {
-      alert(`Image upload not supported yet.`)
-      // You can add additional logic here, such as:
-      // - Refresh the list of images
-      // - Show a success notification
-      // - Store the image reference with the unit code
+    onImageSelected(file: File) {
+      console.log('Image selected in HomeView:', file)
+      this.image = file
     },
   },
 })

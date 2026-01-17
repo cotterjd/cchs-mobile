@@ -53,7 +53,6 @@ import { defineComponent } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import SpacerBreak from '@/components/SpacerBreak.vue'
-import { uploadImage } from '@/xhr'
 
 export default defineComponent({
   name: 'ImageUpload',
@@ -75,8 +74,7 @@ export default defineComponent({
   data() {
     return {
       preview: '' as string,
-      base64Data: '' as string,
-      filename: '' as string,
+      selectedFile: null as File | null,
       uploading: false,
       uploadStatus: null as { type: string; message: string } | null,
     }
@@ -92,26 +90,10 @@ export default defineComponent({
       cameraInput?.click()
     },
 
-    convertToBase64(file: File): Promise<string> {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
-            const base64String = reader.result.split(',')[1]
-            resolve(base64String)
-          } else {
-            reject(new Error('Failed to convert file to base64'))
-          }
-        }
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-    },
-
     async onFileSelected(event: Event) {
       const target = event.target as HTMLInputElement
       const file = target.files?.[0]
+      console.log(`FILE`, file)
 
       if (!file) return
 
@@ -123,10 +105,9 @@ export default defineComponent({
         }
         reader.readAsDataURL(file)
 
-        // Convert to base64 for upload
-        this.base64Data = await this.convertToBase64(file)
-        console.log(`base64dat`, this.base64Data)
-        this.filename = file.name
+        // Store the file and emit to parent
+        this.selectedFile = file
+        this.$emit('image-selected', file)
         this.uploadStatus = null
       } catch (error) {
         console.error('Error processing image:', error)
@@ -139,55 +120,12 @@ export default defineComponent({
 
     clearImage() {
       this.preview = ''
-      this.base64Data = ''
-      this.filename = ''
+      this.selectedFile = null
       this.uploadStatus = null
       const fileInput = this.$refs.fileInput as HTMLInputElement
       const cameraInput = this.$refs.cameraInput as HTMLInputElement
       if (fileInput) fileInput.value = ''
-      if (cameraInput) cameraInput.value = ''
-    },
-
-    // TODO: move this logic to the Add Codes button or something
-    async onSaveImage() {
-      if (!this.base64Data) return
-
-      this.uploading = true
-      this.uploadStatus = null
-
-      try {
-        const result = await uploadImage({
-          base64: this.base64Data,
-          filename: this.filename,
-          unitId: this.unitId,
-          job: this.job,
-        })
-
-        if (result.success) {
-          this.uploadStatus = {
-            type: 'success',
-            message: 'Image uploaded successfully!',
-          }
-          this.$emit('upload-success', result.data)
-          // Clear after successful upload
-          setTimeout(() => {
-            this.clearImage()
-          }, 2000)
-        } else {
-          this.uploadStatus = {
-            type: 'error',
-            message: 'Upload failed. Please try again.',
-          }
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error)
-        this.uploadStatus = {
-          type: 'error',
-          message: 'Upload failed. Please try again.',
-        }
-      } finally {
-        this.uploading = false
-      }
+      this.$emit('image-cleared')
     },
   },
 })
