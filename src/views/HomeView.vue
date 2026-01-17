@@ -381,19 +381,23 @@ export default defineComponent({
         this.loading = true
         this.saving = this.unitName
         saveUnitCodes(codeToSave, this.image)
-          .then(this.getSavedCodes)
+          .then((r) => {
+            if (!r.success) alert(`Failed to save unit code. Try syncing later when you have a connection`)
+            else {
+              alert('Saved successfully')
+              this.getSavedCodes()
+            }
+          })
           .then(() => {
             this.resetValues()
-            alert('Saved successfully')
           })
           .catch(() => {
             this.resetValues()
-            alert('Saved successfully')
+            alert('Failed to save. Try syncing later when you have a connection')
           }) // let it fail silently, the codes can be synced later
       } else {
         // It's in offline mode, it's already added to UI, so just reset values
         this.resetValues()
-        alert('Saved successfully')
       }
     },
     addCodeToUI(unitCode: UnitCode) {
