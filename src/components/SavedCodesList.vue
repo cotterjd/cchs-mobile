@@ -22,6 +22,9 @@
         <i class="pi pi-trash trash-icon"></i>
       </button>
     </li>
+    <div v-if="code.imageData" class="image-indicator">
+      <i class="pi pi-image"></i> Image attached
+    </div>
     <Divider />
   </ul>
 </template>
@@ -51,5 +54,16 @@ export default defineComponent({
     grid-template-columns: 50px 4fr 30px;
     font-size: 22px;
     grid-gap: 10px;
+  }
+  .image-indicator {
+    color: #666;
+    font-size: 14px;
+    padding: 5px 0 10px 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .image-indicator i {
+    color: #4DBA87;
   }
 </style>

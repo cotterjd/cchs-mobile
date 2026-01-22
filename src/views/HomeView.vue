@@ -319,10 +319,24 @@ export default defineComponent({
         this.loading = false
       }
     },
-    onSyncCode(code: UnitCode) {
+    async onSyncCode(code: UnitCode) {
       if (this.offlineMode) return alert(`Cannot sync in offline mode.`)
       this.syncing = code.unit
-      saveUnitCodes(code)
+
+      // TODO: combine this with logic at line 486
+      // Convert base64 back to File if image exists
+      let imageFile: File | null = null
+      if (code.imageData) {
+        try {
+          const response = await fetch(code.imageData)
+          const blob = await response.blob()
+          imageFile = new File([blob], `${code.unit}.jpg`, { type: blob.type })
+        } catch (err) {
+          console.error(`Failed to convert image data:`, err)
+        }
+      }
+
+      saveUnitCodes(code, imageFile)
         .then((_: void | CreateResponse) => this.syncing = ``)
         .then(this.getSavedCodes)
         .catch((err) => {
@@ -370,13 +384,28 @@ export default defineComponent({
       }
     },
     saveCodes(codes: string[]) {
-      const codeToSave = {
+      const codeToSave: UnitCode = {
         user: this.storageUser,
         unit: this.unitName,
         codes: codes.join(`, `),
         property: this.storageJob,
       }
-      this.addCodeToUI(codeToSave)
+
+      // Convert image to base64 for offline storage
+      if (this.image) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          codeToSave.imageData = e.target?.result as string
+          this.addCodeToUI(codeToSave)
+          this.proceedWithSave(codeToSave)
+        }
+        reader.readAsDataURL(this.image)
+      } else {
+        this.addCodeToUI(codeToSave)
+        this.proceedWithSave(codeToSave)
+      }
+    },
+    proceedWithSave(codeToSave: UnitCode) {
       if (!this.offlineMode) {
         this.loading = true
         this.saving = this.unitName
@@ -445,10 +474,26 @@ export default defineComponent({
     getStorageCodes() {
       return JSON.parse(localStorage.getItem(this.storageJob) || `[]`)
     },
-    syncUnsavedUnits() {
+    async syncUnsavedUnits() {
       this.loading = true
       const unsavedCodes = this.getStorageCodes()
-      Promise.all(unsavedCodes.map(saveUnitCodes))
+
+      // Convert each unit's base64 image to File before syncing
+      const syncPromises = unsavedCodes.map(async (code: UnitCode) => {
+        let imageFile: File | null = null
+        if (code.imageData) {
+          try {
+            const response = await fetch(code.imageData)
+            const blob = await response.blob()
+            imageFile = new File([blob], `${code.unit}.jpg`, { type: blob.type })
+          } catch (err) {
+            console.error(`Failed to convert image data:`, err)
+          }
+        }
+        return saveUnitCodes(code, imageFile)
+      })
+
+      Promise.all(syncPromises)
         .then(() => {
           localStorage.setItem(`job`, ``)
           this.inputJob = ``
