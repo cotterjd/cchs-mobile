@@ -154,7 +154,6 @@ import {
   saveUnitCodes,
   deleteUnitCode,
   submitBug,
-  generateReport,
   getUnit,
 } from '@/xhr'
 import { UnitCode, Bug } from '@/types'
@@ -302,8 +301,6 @@ export default defineComponent({
     onDeleteCode(savedCode: UnitCode) {
       if (this.offlineMode) return alert(`Cannot delete in Offline Mode.`)
 
-      // IDEA: this takes a long time to fail when offline.
-      // Maybe don't block UI and handle differently
       this.loading = true
       const yes = window.confirm(`Are you sure you want to delete unit code ${savedCode.unit} ${savedCode.codes}?`)
       if (yes) {
@@ -323,19 +320,7 @@ export default defineComponent({
       if (this.offlineMode) return alert(`Cannot sync in offline mode.`)
       this.syncing = code.unit
 
-      // TODO: combine this with logic at line 486
-      // Convert base64 back to File if image exists
-      let imageFile: File | null = null
-      if (code.imageData) {
-        try {
-          const response = await fetch(code.imageData)
-          const blob = await response.blob()
-          imageFile = new File([blob], `${code.unit}.jpg`, { type: blob.type })
-        } catch (err) {
-          console.error(`Failed to convert image data:`, err)
-        }
-      }
-
+      const imageFile = await this.getAndConvertImage(code)
       saveUnitCodes(code, imageFile)
         .then((_: void | CreateResponse) => this.syncing = ``)
         .then(this.getSavedCodes)
@@ -382,6 +367,24 @@ export default defineComponent({
             alert(`Error submitting bug. Please try again or contact support at 405 919 4600`)
           })
       }
+    },
+    /**
+     * If there's an image saved in localStorage
+     * it will convert it back to a File object
+     * and return it.
+     */
+    async getAndConvertImage(code: UnitCode) {
+      let imageFile: File | null = null
+      if (code.imageData) {
+        try {
+          const response = await fetch(code.imageData)
+          const blob = await response.blob()
+          imageFile = new File([blob], `${code.unit}.jpg`, { type: blob.type })
+        } catch (err) {
+          console.error(`Failed to convert image data:`, err)
+        }
+      }
+      return imageFile
     },
     saveCodes(codes: string[]) {
       const codeToSave: UnitCode = {
@@ -480,16 +483,7 @@ export default defineComponent({
 
       // Convert each unit's base64 image to File before syncing
       const syncPromises = unsavedCodes.map(async (code: UnitCode) => {
-        let imageFile: File | null = null
-        if (code.imageData) {
-          try {
-            const response = await fetch(code.imageData)
-            const blob = await response.blob()
-            imageFile = new File([blob], `${code.unit}.jpg`, { type: blob.type })
-          } catch (err) {
-            console.error(`Failed to convert image data:`, err)
-          }
-        }
+        const imageFile = await this.getAndConvertImage(code)
         return saveUnitCodes(code, imageFile)
       })
 
