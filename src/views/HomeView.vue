@@ -77,6 +77,12 @@
     @image-selected="onImageSelected"
   />
   <spacer-break />
+  <Button
+    @click="onAddCodes"
+    label="Add Codes"
+    class="full p-button-lg p-button-success"
+  />
+  <spacer-break />
 
   <Button
     @click="onEndJob"
