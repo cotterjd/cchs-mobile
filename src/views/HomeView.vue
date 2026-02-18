@@ -77,12 +77,6 @@
     @image-selected="onImageSelected"
   />
   <spacer-break />
-  <Button
-    @click="onAddCodes"
-    label="Add Codes"
-    class="full p-button-lg p-button-success"
-  />
-  <spacer-break />
 
   <Button
     @click="onEndJob"
@@ -160,6 +154,7 @@ import {
   saveUnitCodes,
   deleteUnitCode,
   submitBug,
+  generateReport,
   getUnit,
 } from '@/xhr'
 import { UnitCode, Bug } from '@/types'
@@ -307,6 +302,8 @@ export default defineComponent({
     onDeleteCode(savedCode: UnitCode) {
       if (this.offlineMode) return alert(`Cannot delete in Offline Mode.`)
 
+      // IDEA: this takes a long time to fail when offline.
+      // Maybe don't block UI and handle differently
       this.loading = true
       const yes = window.confirm(`Are you sure you want to delete unit code ${savedCode.unit} ${savedCode.codes}?`)
       if (yes) {
@@ -322,12 +319,10 @@ export default defineComponent({
         this.loading = false
       }
     },
-    async onSyncCode(code: UnitCode) {
+    onSyncCode(code: UnitCode) {
       if (this.offlineMode) return alert(`Cannot sync in offline mode.`)
       this.syncing = code.unit
-
-      const imageFile = await this.getAndConvertImage(code)
-      saveUnitCodes(code, imageFile)
+      saveUnitCodes(code)
         .then((_: void | CreateResponse) => this.syncing = ``)
         .then(this.getSavedCodes)
         .catch((err) => {
@@ -374,68 +369,31 @@ export default defineComponent({
           })
       }
     },
-    /**
-     * If there's an image saved in localStorage
-     * it will convert it back to a File object
-     * and return it.
-     */
-    async getAndConvertImage(code: UnitCode) {
-      let imageFile: File | null = null
-      if (code.imageData) {
-        try {
-          const response = await fetch(code.imageData)
-          const blob = await response.blob()
-          imageFile = new File([blob], `${code.unit}.jpg`, { type: blob.type })
-        } catch (err) {
-          console.error(`Failed to convert image data:`, err)
-        }
-      }
-      return imageFile
-    },
     saveCodes(codes: string[]) {
-      const codeToSave: UnitCode = {
+      const codeToSave = {
         user: this.storageUser,
         unit: this.unitName,
         codes: codes.join(`, `),
         property: this.storageJob,
       }
-
-      // Convert image to base64 for offline storage
-      if (this.image) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          codeToSave.imageData = e.target?.result as string
-          this.addCodeToUI(codeToSave)
-          this.proceedWithSave(codeToSave)
-        }
-        reader.readAsDataURL(this.image)
-      } else {
-        this.addCodeToUI(codeToSave)
-        this.proceedWithSave(codeToSave)
-      }
-    },
-    proceedWithSave(codeToSave: UnitCode) {
+      this.addCodeToUI(codeToSave)
       if (!this.offlineMode) {
         this.loading = true
         this.saving = this.unitName
         saveUnitCodes(codeToSave, this.image)
-          .then((r) => {
-            if (!r.success) alert(`Failed to save unit code. Try syncing later when you have a connection`)
-            else {
-              alert('Saved successfully')
-              this.getSavedCodes()
-            }
-          })
+          .then(this.getSavedCodes)
           .then(() => {
             this.resetValues()
+            alert('Saved successfully')
           })
           .catch(() => {
             this.resetValues()
-            alert('Failed to save. Try syncing later when you have a connection')
+            alert('Saved successfully')
           }) // let it fail silently, the codes can be synced later
       } else {
         // It's in offline mode, it's already added to UI, so just reset values
         this.resetValues()
+        alert('Saved successfully')
       }
     },
     addCodeToUI(unitCode: UnitCode) {
@@ -483,17 +441,10 @@ export default defineComponent({
     getStorageCodes() {
       return JSON.parse(localStorage.getItem(this.storageJob) || `[]`)
     },
-    async syncUnsavedUnits() {
+    syncUnsavedUnits() {
       this.loading = true
       const unsavedCodes = this.getStorageCodes()
-
-      // Convert each unit's base64 image to File before syncing
-      const syncPromises = unsavedCodes.map(async (code: UnitCode) => {
-        const imageFile = await this.getAndConvertImage(code)
-        return saveUnitCodes(code, imageFile)
-      })
-
-      Promise.all(syncPromises)
+      Promise.all(unsavedCodes.map(saveUnitCodes))
         .then(() => {
           localStorage.setItem(`job`, ``)
           this.inputJob = ``
